@@ -1,4 +1,6 @@
-use halo2_proofs::{arithmetic::FieldExt, circuit::*, plonk::*, poly::Rotation};
+//! This circuit is to check whether the output(c) is produced from the specific fibo-input(a,b),
+
+use halo2_proofs::{arithmetic::Field, circuit::*, plonk::*, poly::Rotation};
 use snark_verifier::system::halo2::Config;
 use std::marker::PhantomData;
 
@@ -12,7 +14,7 @@ struct FibonacciConfig {
 }
 
 impl FibonacciConfig {
-    pub fn new(meta: &mut ConstraintSystem<F>) -> Self {
+    pub fn new<F: Field>(meta: &mut ConstraintSystem<F>) -> Self {
         let col_a = meta.advice_column();
         let col_b = meta.advice_column();
         let col_c = meta.advice_column();
@@ -46,10 +48,13 @@ impl FibonacciConfig {
     }
 }
 
+// This circuit is to check whether the output(c) is produced from the specific fibo-input(a,b),
+// The private input: none.
+// The public input: a,b,c(output)
 #[derive(Default)]
 struct FibonacciCircuit<F>(PhantomData<F>);
 
-impl<F: FieldExt> FibonacciCircuit<F> {
+impl<F: Field> FibonacciCircuit<F> {
     #[allow(clippy::type_complexity)]
     pub fn assign_first_row(
         &self,
@@ -128,9 +133,10 @@ impl<F: FieldExt> FibonacciCircuit<F> {
     }
 }
 
-impl<F: FieldExt> Circuit<F> for FibonacciCircuit<F> {
+impl<F: Field> Circuit<F> for FibonacciCircuit<F> {
     type Config = FibonacciConfig;
     type FloorPlanner = SimpleFloorPlanner;
+    type Params = ();
 
     fn without_witnesses(&self) -> Self {
         Self::default()
@@ -155,6 +161,7 @@ impl<F: FieldExt> Circuit<F> for FibonacciCircuit<F> {
             prev_c = c_cell;
         }
 
+        // check with the public input.
         self.expose_public(&config, layouter.namespace(|| "out"), &prev_c, 2)?;
 
         Ok(())
@@ -163,10 +170,11 @@ impl<F: FieldExt> Circuit<F> for FibonacciCircuit<F> {
 
 #[cfg(test)]
 mod tests {
+    use halo2_proofs::dev::MockProver;
     use std::marker::PhantomData;
 
-    use super::FibonacciCircuit;
-    use halo2_proofs::{dev::MockProver, pasta::Fp};
+    use super::*;
+    use halo2_proofs::halo2curves::pasta::Fp;
 
     #[test]
     fn test_fibonacci() {
@@ -181,25 +189,10 @@ mod tests {
         let mut public_input = vec![a, b, out];
 
         let prover = MockProver::run(k, &circuit, vec![public_input.clone()]).unwrap();
-        prover.assert_satisfied();
+        assert_eq!(prover.verify(), Ok(()));
 
         public_input[2] += Fp::one();
-        let _prover = MockProver::run(k, &circuit, vec![public_input]).unwrap();
-        // uncomment the following line and the assert will fail
-        // _prover.assert_satisfied();
-    }
-
-    #[test]
-    fn plot_fibonacci1() {
-        use plotters::prelude::*;
-
-        let root = BitMapBackend::new("fib-1-layout.png", (1024, 3096)).into_drawing_area();
-        root.fill(&WHITE).unwrap();
-        let root = root.titled("Fib 1 Layout", ("sans-serif", 60)).unwrap();
-
-        let circuit = FibonacciCircuit::<Fp>(PhantomData);
-        halo2_proofs::dev::CircuitLayout::default()
-            .render(4, &circuit, &root)
-            .unwrap();
+        let prover = MockProver::run(k, &circuit, vec![public_input]).unwrap();
+        assert!(prover.verify().is_err());
     }
 }

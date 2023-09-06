@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2.git", tag = "v2023_04_20" }
 snark-verifier = { git = "https://github.com/privacy-scaling-explorations/snark-verifier", tag = "v2023_04_20", default-features = false, features = ["loader_halo2", "system_halo2", "loader_evm"] }
+snark-verifier-sdk = { git = "https://github.com/privacy-scaling-explorations/snark-verifier.git", default-features = false, features = ["loader_halo2", "loader_evm", "parallel", "display", "halo2_circuit_params"] }
 
 ecdsa = { git = "https://github.com/privacy-scaling-explorations/halo2wrong", tag = "v2023_04_20" }
 ecc =       { git = "https://github.com/privacy-scaling-explorations/halo2wrong", tag = "v2023_04_20" }
